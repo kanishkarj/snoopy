@@ -1,4 +1,5 @@
 mod capture;
+mod parse;
 
 use clap::{crate_authors, crate_description, crate_name, crate_version, App, Arg, SubCommand};
 use pcap::{Capture, Precision, TimestampType};
@@ -6,16 +7,19 @@ use pcap::{Capture, Precision, TimestampType};
 use crate::lib::packet_capture::PacketCapture;
 use crate::lib::args::capture::CaptureSubcommand;
 use std::cell::RefCell;
+use crate::lib::args::parse::ParseSubcommand;
 
 pub fn parse_cli_args() {
 
     let capture_subcommand = CaptureSubcommand::new();
+    let parse_subcommand = ParseSubcommand::new();
 
     let matches = App::new(crate_name!())
         .version(crate_version!())
         .author(crate_authors!())
         .about(crate_description!())
         .subcommand(capture_subcommand.get_subcommand())
+        .subcommand(parse_subcommand.get_subcommand())
         .get_matches();
 
     match matches.subcommand_matches("capture") {
@@ -50,6 +54,13 @@ pub fn parse_cli_args() {
                     }
                 }
             }
+        },
+        None => {}
+    };
+
+    match matches.subcommand_matches("parse") {
+        Some(args) => {
+            parse_subcommand.start(args);
         },
         None => {}
     };
