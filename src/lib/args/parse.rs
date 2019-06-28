@@ -1,6 +1,7 @@
 use clap::{App, Arg, ArgMatches, SubCommand};
 use pcap::{Capture, Inactive, Precision, TimestampType};
 use std::cell::RefCell;
+use crate::lib::packet_capture::PacketCapture;
 
 pub struct ParseSubcommand {}
 
@@ -23,16 +24,7 @@ impl<'a, 'b> ParseSubcommand {
 
     pub fn start(&self, args: &ArgMatches) {
         if let Some(val) = args.value_of("file_name") {
-            match Capture::from_file(val) {
-                Ok(mut cap_handle) => {
-                    while let Ok(packet) = cap_handle.next() {
-                        println!("{:?}", packet);
-                    }
-                },
-                Err(err) => {
-                    eprintln!("{:?}", err);
-                }
-            }
+            PacketCapture::parse_from_file(val);
         }
     }
 }

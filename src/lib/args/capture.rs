@@ -1,6 +1,7 @@
 use clap::{App, Arg, ArgMatches, SubCommand};
 use pcap::{Capture, Inactive, Precision, TimestampType};
 use std::cell::RefCell;
+use crate::lib::packet_capture::PacketCapture;
 
 fn is_tstamp_type(val: String) -> Result<(), String> {
     let domain_set = vec![
@@ -140,20 +141,9 @@ impl<'a, 'b> CaptureSubcommand {
 
         match device.open() {
             Ok(mut cap_handle) => if let Some(val) = args.value_of("savefile") {
-                match cap_handle.savefile(val) {
-                    Ok(mut file) => {
-                        while let Ok(packet) = cap_handle.next() {
-                            file.write(&packet);
-                        }
-                    },
-                    Err(err) => {
-                        eprintln!("{:?}", err);
-                    }
-                }
+                PacketCapture::save_to_file(cap_handle, val);
             } else {
-                while let Ok(packet) = cap_handle.next() {
-                    println!("{:?}", packet);
-                }
+                PacketCapture::print_to_console(cap_handle);
             },
             Err(err) => {
                 eprintln!("{:?}", err);
