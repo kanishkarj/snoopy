@@ -1,5 +1,5 @@
-use clap::{Arg, SubCommand, App, ArgMatches};
-use pcap::{Precision, TimestampType, Capture, Inactive};
+use clap::{App, Arg, ArgMatches, SubCommand};
+use pcap::{Capture, Inactive, Precision, TimestampType};
 use std::cell::RefCell;
 
 fn is_tstamp_type(val: String) -> Result<(), String> {
@@ -41,14 +41,12 @@ fn is_precision_type(val: String) -> Result<(), String> {
 
 pub struct CaptureSubcommand {}
 
-impl<'a,'b> CaptureSubcommand {
-
-    pub fn new() ->  CaptureSubcommand {
+impl<'a, 'b> CaptureSubcommand {
+    pub fn new() -> CaptureSubcommand {
         CaptureSubcommand {}
     }
 
-    pub fn get_subcommand(&self) -> App<'a,'b> {
-
+    pub fn get_subcommand(&self) -> App<'a, 'b> {
         let run_args = vec![
             Arg::with_name("device_handle")
                 .required(true),
@@ -89,49 +87,79 @@ impl<'a,'b> CaptureSubcommand {
                     (Host / HostLowPrec / HostHighPrec / Adapter / AdapterUnsynced).")
                 .takes_value(true)
                 .long("tstamp_type")
-                .validator(is_tstamp_type)
+                .validator(is_tstamp_type),
+            Arg::with_name("savefile")
+                .help("Save the captured packets to file.")
+                .takes_value(true)
+                .long("savefile")
         ];
 
         SubCommand::with_name("capture")
             .about("Capture packets from interfaces.")
-            .subcommand(
-                SubCommand::with_name("list")
-                .about("List all interfaces.")
-            )
+            .subcommand(SubCommand::with_name("list").about("List all interfaces."))
             .subcommand(
                 SubCommand::with_name("run")
                     .about("Start capturing packets.")
-                    .args(&run_args)
+                    .args(&run_args),
             )
     }
 
-    pub fn run_args(&self, device: RefCell<Capture<Inactive>>, args: &ArgMatches) -> Capture<Inactive> {
+    pub fn run_args(
+        &self,
+        device: RefCell<Capture<Inactive>>,
+        args: &ArgMatches,
+    ) -> Capture<Inactive> {
         let mut device = device.into_inner();
         // the validators will ensure we are passing the proper type, hence using unwrap is not a problem.
         if let Some(val) = args.value_of("timeout") {
             device = device.timeout(val.parse().unwrap());
         }
         if let Some(val) = args.value_of("promisc") {
-            device  = device.promisc(val.parse().unwrap());
+            device = device.promisc(val.parse().unwrap());
         }
         if let Some(val) = args.value_of("rfmon") {
-            device  = device.rfmon(val.parse().unwrap());
+            device = device.rfmon(val.parse().unwrap());
         }
         if let Some(val) = args.value_of("buffer_size") {
-            device  = device.buffer_size(val.parse().unwrap());
+            device = device.buffer_size(val.parse().unwrap());
         }
         if let Some(val) = args.value_of("snaplen") {
-            device  = device.snaplen(val.parse().unwrap());
+            device = device.snaplen(val.parse().unwrap());
         }
         if let Some(val) = args.value_of("precision") {
-            device  = device.precision(self.get_precision_type(val).unwrap());
+            device = device.precision(self.get_precision_type(val).unwrap());
         }
         if let Some(val) = args.value_of("tstamp_type") {
-            device  = device.tstamp_type(self.get_tstamp_type(val).unwrap());
+            device = device.tstamp_type(self.get_tstamp_type(val).unwrap());
         }
         return device;
     }
 
+    pub fn start(&self, device: RefCell<Capture<Inactive>>, args: &ArgMatches) {
+        let mut device = device.into_inner();
+
+        match device.open() {
+            Ok(mut cap_handle) => if let Some(val) = args.value_of("savefile") {
+                match cap_handle.savefile(val) {
+                    Ok(mut file) => {
+                        while let Ok(packet) = cap_handle.next() {
+                            file.write(&packet);
+                        }
+                    },
+                    Err(err) => {
+                        eprintln!("{:?}", err);
+                    }
+                }
+            } else {
+                while let Ok(packet) = cap_handle.next() {
+                    println!("{:?}", packet);
+                }
+            },
+            Err(err) => {
+                eprintln!("{:?}", err);
+            }
+        }
+    }
 
     fn get_precision_type(&self, val: &str) -> Result<Precision, ()> {
         match val {
