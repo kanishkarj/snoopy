@@ -1,3 +1,7 @@
+mod lib;
+
+use lib::args::parse_cli_args;
+
 fn main() {
-    println!("Hello, world!");
+    parse_cli_args();
 }
