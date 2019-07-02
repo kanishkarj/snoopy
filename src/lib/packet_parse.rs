@@ -4,15 +4,45 @@ use hwaddr::HwAddr;
 use std::net::{Ipv4Addr, Ipv6Addr};
 use tls_parser::TlsPlaintext;
 use core::borrow::Borrow;
+use std::rc::Rc;
+
+#[derive(Debug)]
+pub enum GlobalPacket<'a> {
+    Tcp(TcpHeader),
+    Udp(UdpHeader),
+    Ethernet(EthernetFrame),
+    Ipv4(IPv4Header),
+    Ipv6(IPv6Header),
+    Icmp(ICMPHeader),
+    Dns(dns_parser::Packet<'a>),
+    Tls(TlsPlaintext<'a>)
+}
+
+#[derive(Debug)]
+pub struct ParsedPacket<'a> {
+    headers: Vec<GlobalPacket<'a>>,
+    data: Vec<u8>,
+}
+
+impl<'a> ParsedPacket<'a> {
+    pub fn new() -> ParsedPacket<'a> {
+        ParsedPacket {
+            headers: vec![],
+            data: vec![]
+        }
+    }
+}
 
 pub struct PacketParse {}
 
+#[derive(Debug,Clone,Copy)]
 pub struct EthernetFrame {
     pub source_mac: [u8; 6],
     pub dest_mac: [u8; 6],
     pub ethertype: ether::Protocol,
 }
 
+#[derive(Debug,Clone,Copy)]
 pub struct UdpHeader {
     pub source_port: u16,
     pub dest_port: u16,
@@ -20,6 +50,7 @@ pub struct UdpHeader {
     pub checksum: u16,
 }
 
+#[derive(Debug,Clone,Copy)]
 pub struct TcpHeader {
     pub source_port: u16,
     pub dest_port: u16,
@@ -32,6 +63,7 @@ pub struct TcpHeader {
     pub urgent_pointer: u16,
 }
 
+#[derive(Debug,Clone,Copy)]
 pub struct IPv4Header {
     pub version: u8,
     pub length: u16,
@@ -48,12 +80,29 @@ pub struct IPv4Header {
     pub ecn: u8,
 }
 
+#[derive(Debug,Clone,Copy)]
 pub struct ICMPHeader {
     pub kind: icmp::Kind,
     pub code: u8,
     pub checksum: u16
 }
 
+// so that lifetime of parsed_packet and content are same.s
+struct RawPacket<'a> {
+    parsed_packet : ParsedPacket<'a>,
+    content: Vec<u8>
+}
+
+impl<'a> RawPacket<'a> {
+    pub fn new() -> RawPacket<'a>{
+        RawPacket {
+            parsed_packet: ParsedPacket::new(),
+            content: vec![],
+        }
+    }
+}
+
+#[derive(Debug,Clone,Copy)]
 pub struct IPv6Header {}
 
 impl PacketParse {
@@ -62,48 +111,77 @@ impl PacketParse {
     }
 
     pub fn parse_packet(&self, content: &[u8]) {
-        if let Ok(content)  = ether::Packet::new(content) {
-            println!("ether");
-            match content.protocol() {
+        let mut raw_packet = RawPacket::new();
+        if let Ok((headers, content)) = self.parse_ether(content) {
+            raw_packet.parsed_packet.headers.push(GlobalPacket::Ethernet(headers));
+
+            match headers.ethertype {
                 ether::Protocol::Ipv4 => {
-                    if let Ok(content) = ip::v4::Packet::new(content.payload()) {
-                        println!("ipv4");
-                        match content.protocol() {
-                            ip::Protocol::Icmp => {
-                                if let Ok(content) = icmp::Packet::new(content.payload()) {
-                                    println!("icmp");
-                                }
-                            },
-                            ip::Protocol::Tcp => {
-                                if let Ok(content) = tcp::Packet::new(content.payload()) {
-                                    if let Ok(content) = tls_parser::tls::tls_parser(content.payload()) {
-                                        println!("tls");
+                    match self.parse_ipv4(&content) {
+                        Ok((headers, content)) => {
+                            raw_packet.parsed_packet.headers.push(GlobalPacket::Ipv4(headers));
+
+                            match headers.protocol {
+                                ip::Protocol::Tcp => {
+                                    match self.parse_tcp(&content) {
+                                        Ok((headers, content)) => {
+                                            raw_packet.parsed_packet.headers.push(GlobalPacket::Tcp(headers));
+                                            raw_packet.content = content.clone();
+                                            if let Ok((headers, content)) = self.parse_tls(&raw_packet.content) {
+                                                raw_packet.parsed_packet.headers.push(GlobalPacket::Tls(headers));
+                                            } else {
+                                                raw_packet.parsed_packet.data = content;
+                                            }
+                                        },
+                                        Err(err) => {
+                                            raw_packet.parsed_packet.data = content;
+                                        }
                                     }
-                                }
-                            },
-                            ip::Protocol::Udp => {
-                                if let Ok(content) = udp::Packet::new(content.payload()) {
-                                    if let Ok(content) = dns_parser::Packet::parse(content.payload()) {
-                                        println!("dns");
+                                },
+                                ip::Protocol::Udp => {
+                                    match self.parse_udp(&content) {
+                                        Ok((headers, content)) => {
+                                            raw_packet.parsed_packet.headers.push(GlobalPacket::Udp(headers));
+                                            if let Ok(dns_packet) = self.parse_dns(&raw_packet.content) {
+                                                raw_packet.parsed_packet.headers.push(GlobalPacket::Dns(dns_packet));
+                                            } else {
+                                                raw_packet.parsed_packet.data = content.to_owned();
+                                            }
+                                        },
+                                        Err(err) => {
+                                            raw_packet.parsed_packet.data = content;
+                                        }
                                     }
-                                }
-                            },
-                            _ => {}
+                                },
+                                ip::Protocol::Icmp => {
+                                    match self.parse_icmp(&content) {
+                                        Ok((headers, content)) => {
+                                            raw_packet.parsed_packet.headers.push(GlobalPacket::Icmp(headers));
+                                        },
+                                        Err(err) => {
+                                            raw_packet.parsed_packet.data = content;
+                                        }
+                                    }
+                                },
+                                _ => {
+                                    raw_packet.parsed_packet.data = content;
+                                },
+                            }
+                        },
+                        Err(err) => {
+                            raw_packet.parsed_packet.data = content;
                         }
                     }
                 },
-                ether::Protocol::Ipv6 => {
-                    if let Ok(content) = ip::v6::Packet::new(content.payload()) {
-                        println!("ipv6");
-                    }
+                ether::Protocol::Ipv6 => {},
+                _ => {
+                    raw_packet.parsed_packet.data = content;
                 },
-                _ => {}
             }
         }
 
-        println!("");
+        println!("{:?} \n",raw_packet.parsed_packet);
     }
-
     fn parse_ether(&self, packet_content: &[u8]) -> Result<(EthernetFrame,Vec<u8>), packet::Error>{
         let parsed = ether::Packet::new(packet_content)?;
         return Ok((EthernetFrame{
