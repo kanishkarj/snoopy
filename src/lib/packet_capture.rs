@@ -33,7 +33,9 @@ impl PacketCapture {
 
     pub fn print_to_console(mut cap_handle: Capture<Active>) {
         while let Ok(packet) = cap_handle.next() {
-            println!("{:?}", packet);
+//            println!("{:?}", packet);
+            let packet_parse = PacketParse::new();
+            packet_parse.parse_packet(packet.data);
         }
     }
 
