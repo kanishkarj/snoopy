@@ -9,8 +9,10 @@ edition = "2018"
 [dependencies]
 clap = "2.33.0"
 pcap = "0.7.0"
-packet = "0.1.2"
+pktparse = {version = "*", features = ["derive"]}
 dns-parser = "0.8"
 tls-parser = "0.7"
 hwaddr = "0.1.2"
 nom = "*"
+serde_json = "1.0"
+serde = "1.0"

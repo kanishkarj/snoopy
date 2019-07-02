@@ -14,7 +14,12 @@ impl<'a, 'b> ParseSubcommand {
     pub fn get_subcommand(&self) -> App<'a, 'b> {
         let parse_args = vec![
             Arg::with_name("file_name")
-                .required(true)
+                .required(true),
+            Arg::with_name("savefile")
+                .help("Parse the packets into JSON and save them to memory.")
+                .takes_value(true)
+                .short("s")
+                .long("savefile")
         ];
 
         SubCommand::with_name("parse")
@@ -23,8 +28,12 @@ impl<'a, 'b> ParseSubcommand {
     }
 
     pub fn start(&self, args: &ArgMatches) {
+        let mut save_file_path = None;
+        if let Some(val) = args.value_of("savefile") {
+            save_file_path = Some(val);
+        }
         if let Some(val) = args.value_of("file_name") {
-            PacketCapture::parse_from_file(val);
+            PacketCapture::parse_from_file(val, save_file_path);
         }
     }
 }
