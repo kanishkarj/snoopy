@@ -24,12 +24,14 @@ pub enum PacketHeader {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ParsedPacket {
     headers: Vec<PacketHeader>,
+    remaining: Vec<u8>,
 }
 
 impl ParsedPacket {
     pub fn new() -> ParsedPacket {
         ParsedPacket {
-            headers: vec![]
+            headers: vec![],
+            remaining: vec![]
         }
     }
 }
@@ -58,12 +60,14 @@ impl PacketParse {
                     self.parse_arp(content, &mut pack);
                 },
                 _ => {
-
+                    pack.remaining = content.to_owned();
                 },
             }
                 pack.headers.push(PacketHeader::Ether(headers));
             },
-            Err(_) => {}
+            Err(_) => {
+                pack.remaining = content.to_owned();
+            }
         }
         return pack;
     }
@@ -74,7 +78,9 @@ impl PacketParse {
                 self.parse_ip(&headers.protocol, content, parsed_packet);
                 parsed_packet.headers.push(PacketHeader::Ipv4(headers));
             },
-            Err(_) => {}
+            Err(_) => {
+                parsed_packet.remaining = content.to_owned();
+            }
         }
     }
 
@@ -84,15 +90,17 @@ impl PacketParse {
                 self.parse_ip(&headers.next_header, content, parsed_packet);
                 parsed_packet.headers.push(PacketHeader::Ipv6(headers));
             },
-            Err(_) => {}
+            Err(_) => {
+                parsed_packet.remaining = content.to_owned();
+            }
         }
     }
 
     fn parse_ip(&self, protocol: &IPProtocol, content: &[u8], parsed_packet: &mut ParsedPacket) {
-        if let Ok(_) = self.parse_tcp(content,parsed_packet) {
-
-        } else {
-                self.parse_udp(content,parsed_packet);
+        if let Ok(_) = self.parse_tcp(content,parsed_packet) {}
+        else if let Ok(_) = self.parse_udp(content,parsed_packet) {}
+        else {
+            parsed_packet.remaining = content.to_owned();
         }
     }
 
@@ -100,20 +108,27 @@ impl PacketParse {
         match tcp::parse_tcp_header(content) {
             Ok((content, headers)) => {
                 parsed_packet.headers.push(PacketHeader::Tcp(headers));
+                parsed_packet.remaining = content.to_owned();
                 Ok(())
             }
             Err(_) => {
+                parsed_packet.remaining = content.to_owned();
                 Err(())
             }
         }
     }
 
-    fn parse_udp(&self, content: &[u8], parsed_packet: &mut ParsedPacket) {
+    fn parse_udp(&self, content: &[u8], parsed_packet: &mut ParsedPacket) -> Result<(),()> {
         match udp::parse_udp_header(content) {
             Ok((content, headers)) => {
                 parsed_packet.headers.push(PacketHeader::Udp(headers));
+                parsed_packet.remaining = content.to_owned();
+                Ok(())
             }
-            Err(_) => {}
+            Err(_) => {
+                parsed_packet.remaining = content.to_owned();
+                Err(())
+            }
         }
     }
 
@@ -122,7 +137,9 @@ impl PacketParse {
             Ok((content, headers)) => {
                 parsed_packet.headers.push(PacketHeader::Arp(headers));
             }
-            Err(_) => {}
+            Err(_) => {
+                parsed_packet.remaining = content.to_owned();
+            }
         }
     }
 }
