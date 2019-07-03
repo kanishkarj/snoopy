@@ -5,9 +5,9 @@ use clap::{crate_authors, crate_description, crate_name, crate_version, App, Arg
 use pcap::{Capture, Precision, TimestampType};
 
 use crate::lib::packet_capture::PacketCapture;
-use crate::lib::args::capture::CaptureSubcommand;
+use crate::args::capture::CaptureSubcommand;
 use std::cell::RefCell;
-use crate::lib::args::parse::ParseSubcommand;
+use crate::args::parse::ParseSubcommand;
 
 pub fn parse_cli_args() {
 
