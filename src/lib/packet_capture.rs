@@ -1,7 +1,7 @@
 use pcap::{Device, Capture, Inactive, Active};
 use std::fmt::{Display, Formatter};
 use std::path::Path;
-use crate::lib::packet_parse::PacketParse;
+use crate::lib::packet_parse::{PacketParse, PacketHeader};
 use std::fs;
 
 pub struct PacketCapture {}
@@ -54,7 +54,7 @@ impl PacketCapture {
                     let packets = serde_json::to_string(&packets).unwrap();
                     fs::write(path, packets).unwrap();
                 } else {
-                    println!("{:?}", packets);
+//                    println!("{:?}", packets);
                 }
             },
             Err(err) => {
