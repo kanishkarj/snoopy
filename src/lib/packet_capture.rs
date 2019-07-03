@@ -54,7 +54,7 @@ impl PacketCapture {
                     let packets = serde_json::to_string(&packets).unwrap();
                     fs::write(path, packets).unwrap();
                 } else {
-//                    println!("{:?}", packets);
+                    println!("{:?}", packets);
                 }
             },
             Err(err) => {
