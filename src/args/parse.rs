@@ -29,11 +29,12 @@ impl<'a, 'b> ParseSubcommand {
 
     pub fn start(&self, args: &ArgMatches) {
         let mut save_file_path = None;
+        let packet_capture = PacketCapture::new();
         if let Some(val) = args.value_of("savefile") {
             save_file_path = Some(val);
         }
         if let Some(val) = args.value_of("file_name") {
-            PacketCapture::parse_from_file(val, save_file_path);
+            packet_capture.parse_from_file(val, save_file_path);
         }
     }
 }

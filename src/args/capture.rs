@@ -138,12 +138,13 @@ impl<'a, 'b> CaptureSubcommand {
 
     pub fn start(&self, device: RefCell<Capture<Inactive>>, args: &ArgMatches) {
         let mut device = device.into_inner();
+        let packet_capture = PacketCapture::new();
 
         match device.open() {
             Ok(mut cap_handle) => if let Some(val) = args.value_of("savefile") {
-                PacketCapture::save_to_file(cap_handle, val);
+                packet_capture.save_to_file(cap_handle, val);
             } else {
-                PacketCapture::print_to_console(cap_handle);
+                packet_capture.print_to_console(cap_handle);
             },
             Err(err) => {
                 eprintln!("{:?}", err);

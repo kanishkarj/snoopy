@@ -26,7 +26,6 @@ pub enum PacketHeader {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ParsedPacket {
-    pub caplen: u32,
     pub len: u32,
     pub timestamp: i64,
     pub headers: Vec<PacketHeader>,
@@ -36,7 +35,6 @@ pub struct ParsedPacket {
 impl ParsedPacket {
     pub fn new() -> ParsedPacket {
         ParsedPacket {
-            caplen: 0,
             len: 0,
             timestamp: 0,
             headers: vec![],
@@ -80,11 +78,10 @@ impl PacketParse {
         PacketParse{}
     }
 
-    pub fn parse_packet(&self, packet: pcap::Packet) -> ParsedPacket {
-        let mut parsed_packet = self.parse_link_layer(packet.data);
-        parsed_packet.len = packet.header.len;
-        parsed_packet.caplen = packet.header.caplen;
-        parsed_packet.timestamp = packet.header.ts.tv_sec;
+    pub fn parse_packet(&self, data: Vec<u8>, len:u32, ts: i64) -> ParsedPacket {
+        let mut parsed_packet = self.parse_link_layer(&data);
+        parsed_packet.len = len;
+        parsed_packet.timestamp = ts;
         return parsed_packet;
     }
 
