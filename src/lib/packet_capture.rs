@@ -10,15 +10,12 @@ use std::sync::{Arc, Mutex};
 use std::net::IpAddr;
 
 pub struct PacketCapture {
-    threadpool: ThreadPool
 }
 
 impl PacketCapture {
 
     pub fn new() -> PacketCapture {
-        PacketCapture {
-            threadpool: ThreadPool::new( num_cpus::get() * 2 )
-        }
+        PacketCapture {}
     }
 
     pub fn list_devices() -> Result<Vec<String>, pcap::Error> {
@@ -44,42 +41,41 @@ impl PacketCapture {
     pub fn print_to_console(&self, mut cap_handle: Capture<Active>) {
         let pool = ThreadPool::new( num_cpus::get() * 2 );
         while let Ok(packet) = cap_handle.next() {
+
             let data = packet.data.to_owned();
             let len = packet.header.len;
-            let ts = packet.header.ts.tv_sec;
+            let ts: String = format!("{}.{:06}", &packet.header.ts.tv_sec, &packet.header.ts.tv_usec);
 
-            pool.execute(move || {
-                let packet_parse = PacketParse::new();
-                let parsed_packet = packet_parse.parse_packet(data, len,  ts);
-                println!("{:?}", parsed_packet);
-            });
+            let packet_parse = PacketParse::new();
+            let parsed_packet = packet_parse.parse_packet(data, len, ts);
+            self.format_output(&parsed_packet);
         }
     }
 
-    fn get_packet_meta(&self, parsed_packet : ParsedPacket) -> (Option<IpAddr>, Option<u16>, Option<IpAddr>, Option<u16>){
+    fn get_packet_meta(&self, parsed_packet : &ParsedPacket) -> (String, String, String, String){
 
-        let mut src_addr: Option<_> = None;
-        let mut dst_addr: Option<_> = None;
-        let mut src_port: Option<_> = None;
-        let mut dst_port: Option<_> = None;
+        let mut src_addr = "".to_string();
+        let mut dst_addr = "".to_string();
+        let mut src_port = "".to_string();
+        let mut dst_port = "".to_string();
 
         parsed_packet.headers.iter().for_each(|pack| {
             match pack {
                 PacketHeader::Tcp(packet) => {
-                    src_port = Some(packet.source_port);
-                    dst_port = Some(packet.dest_port);
+                    src_port = packet.source_port.to_string();
+                    dst_port = packet.dest_port.to_string();
                 },
                 PacketHeader::Udp(packet) => {
-                    src_port = Some(packet.source_port);
-                    dst_port = Some(packet.dest_port);
+                    src_port = packet.source_port.to_string();
+                    dst_port = packet.dest_port.to_string();
                 },
                 PacketHeader::Ipv4(packet) => {
-                    src_addr = Some(IpAddr::V4(packet.source_addr));
-                    dst_addr = Some(IpAddr::V4(packet.dest_addr));
+                    src_addr = IpAddr::V4(packet.source_addr).to_string();
+                    dst_addr = IpAddr::V4(packet.dest_addr).to_string();
                 },
                 PacketHeader::Ipv6(packet) => {
-                    src_addr = Some(IpAddr::V6(packet.source_addr));
-                    dst_addr = Some(IpAddr::V6(packet.dest_addr));
+                    src_addr = IpAddr::V6(packet.source_addr).to_string();
+                    dst_addr = IpAddr::V6(packet.dest_addr).to_string();
                 },
                 _ => {}
             }
@@ -88,8 +84,13 @@ impl PacketCapture {
         return (src_addr, src_port, dst_addr, dst_port);
     }
 
-    fn format_output(&self, parsed_packet : ParsedPacket) {
-        println!("{:?}", parsed_packet);
+    fn format_output(&self, parsed_packet : &ParsedPacket) {
+        let (src_addr, src_port, dst_addr, dst_port) = self.get_packet_meta(&parsed_packet);
+        let protocol = &parsed_packet.headers[0].to_string();
+        let length = &parsed_packet.len;
+        let ts = &parsed_packet.timestamp;
+
+        println!("{}:{} {}:{} {} {} {}", src_addr, src_port, dst_addr, dst_port, protocol, length, ts);
     }
 
     pub fn parse_from_file(&self, file_name: &str, save_file_path: Option<&str>) {
@@ -102,7 +103,7 @@ impl PacketCapture {
 
                     let data = packet.data.to_owned();
                     let len = packet.header.len;
-                    let ts = packet.header.ts.tv_sec;
+                    let ts: String = format!("{}.{:06}", &packet.header.ts.tv_sec, &packet.header.ts.tv_usec);
 
                     let packets = packets.clone();
 
@@ -121,7 +122,9 @@ impl PacketCapture {
                     fs::write(path, packets).unwrap();
                 } else {
                     let packets = packets.lock().unwrap();
-                    println!("{:?}", *packets);
+                    packets.iter().for_each(|pack| {
+                        self.format_output(pack);
+                    })
                 }
             },
             Err(err) => {

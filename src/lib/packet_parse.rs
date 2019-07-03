@@ -7,6 +7,7 @@ use pktparse::tcp::TcpHeader;
 use pktparse::udp::UdpHeader;
 use pktparse::ipv6::IPv6Header;
 use tls_parser::TlsMessage;
+use std::string::ToString;
 
 use serde::{Deserialize, Serialize};
 
@@ -27,7 +28,7 @@ pub enum PacketHeader {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ParsedPacket {
     pub len: u32,
-    pub timestamp: i64,
+    pub timestamp: String,
     pub headers: Vec<PacketHeader>,
     pub remaining: Vec<u8>,
 }
@@ -36,7 +37,7 @@ impl ParsedPacket {
     pub fn new() -> ParsedPacket {
         ParsedPacket {
             len: 0,
-            timestamp: 0,
+            timestamp: "".to_string(),
             headers: vec![],
             remaining: vec![]
         }
@@ -73,12 +74,27 @@ impl From<dns_parser::Packet<'_>> for DnsPacket {
     }
 }
 
+impl ToString for PacketHeader {
+    fn to_string(&self) -> String {
+        match self {
+            PacketHeader::Ipv4(_) => String::from("Ipv4"),
+            PacketHeader::Ipv6(_) => String::from("Ipv6"),
+            PacketHeader::Dns(_) => String::from("Dns"),
+            PacketHeader::Tls(_) => String::from("Tls"),
+            PacketHeader::Tcp(_) => String::from("Tcp"),
+            PacketHeader::Udp(_) => String::from("Udp"),
+            PacketHeader::Ether(_) => String::from("Ether"),
+            PacketHeader::Arp(_) => String::from("Arp"),
+        }
+    }
+}
+
 impl PacketParse {
     pub fn new() -> PacketParse {
         PacketParse{}
     }
 
-    pub fn parse_packet(&self, data: Vec<u8>, len:u32, ts: i64) -> ParsedPacket {
+    pub fn parse_packet(&self, data: Vec<u8>, len:u32, ts: String) -> ParsedPacket {
         let mut parsed_packet = self.parse_link_layer(&data);
         parsed_packet.len = len;
         parsed_packet.timestamp = ts;
