@@ -35,7 +35,7 @@ impl PacketCapture {
     pub fn print_to_console(mut cap_handle: Capture<Active>) {
         while let Ok(packet) = cap_handle.next() {
             let packet_parse = PacketParse::new();
-            let parsed_packet = packet_parse.parse_packet(packet.data);
+            let parsed_packet = packet_parse.parse_packet(packet);
             println!("{:?}", parsed_packet);
         }
     }
@@ -46,7 +46,7 @@ impl PacketCapture {
                 let mut packets = vec![];
                 while let Ok(packet) = cap_handle.next() {
                     let packet_parse = PacketParse::new();
-                    let parsed_packet = packet_parse.parse_packet(packet.data);
+                    let parsed_packet = packet_parse.parse_packet(packet);
                     packets.push(parsed_packet);
                 }
 
