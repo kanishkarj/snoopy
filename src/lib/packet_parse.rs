@@ -15,6 +15,7 @@ pub struct PacketParse {}
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub enum PacketHeader {
     Tls(TlsType),
+    Dns(DnsPacket),
     Tcp(TcpHeader),
     Udp(UdpHeader),
     Ipv4(IPv4Header),
@@ -51,6 +52,27 @@ pub enum TlsType {
     Alert,
     ApplicationData,
     Heartbeat,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub struct DnsPacket {
+    questions: Vec<String>,
+    answers: Vec<String>,
+}
+
+impl From<dns_parser::Packet<'_>> for DnsPacket {
+    fn from(dns_packet: dns_parser::Packet) -> Self {
+        let questions: Vec<String> = dns_packet.questions.iter().map(|q| {
+            q.qname.to_string()
+        }).collect();
+        let answers: Vec<String> = dns_packet.answers.iter().map(|a| {
+            a.name.to_string()
+        }).collect();
+        Self {
+            questions,
+            answers
+        }
+    }
 }
 
 impl PacketParse {
@@ -148,8 +170,8 @@ impl PacketParse {
     fn parse_udp(&self, content: &[u8], parsed_packet: &mut ParsedPacket) -> Result<(),()> {
         match udp::parse_udp_header(content) {
             Ok((content, headers)) => {
+                self.parse_dns(content, parsed_packet);
                 parsed_packet.headers.push(PacketHeader::Udp(headers));
-                parsed_packet.remaining = content.to_owned();
                 Ok(())
             }
             Err(_) => {
@@ -163,6 +185,17 @@ impl PacketParse {
         match arp::parse_arp_pkt(content) {
             Ok((content, headers)) => {
                 parsed_packet.headers.push(PacketHeader::Arp(headers));
+            }
+            Err(_) => {
+                parsed_packet.remaining = content.to_owned();
+            }
+        }
+    }
+
+    fn parse_dns(&self, content: &[u8], parsed_packet: &mut ParsedPacket) {
+        match dns_parser::Packet::parse(content) {
+            Ok(packet) => {
+                parsed_packet.headers.push(PacketHeader::Dns(DnsPacket::from(packet)));
             }
             Err(_) => {
                 parsed_packet.remaining = content.to_owned();
