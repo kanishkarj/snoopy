@@ -71,7 +71,7 @@ impl PacketParse {
         match  ethernet::parse_ethernet_frame(content) {
             Ok((content, headers)) => {
                 match headers.ethertype {
-                EtherType::IPv4 | EtherType::Other(0) => {
+                EtherType::IPv4 => {
                     self.parse_ipv4(content,&mut pack);
                 },
                 EtherType::IPv6 => {
@@ -96,7 +96,7 @@ impl PacketParse {
     pub fn parse_ipv4(&self, content: &[u8], parsed_packet: &mut ParsedPacket) {
         match  ipv4::parse_ipv4_header(content) {
             Ok((content, headers)) => {
-                self.parse_ip(content, parsed_packet);
+                self.parse_ip(&headers.protocol ,content, parsed_packet);
                 parsed_packet.headers.push(PacketHeader::Ipv4(headers));
             },
             Err(_) => {
@@ -108,7 +108,7 @@ impl PacketParse {
     pub fn parse_ipv6(&self, content: &[u8], parsed_packet: &mut ParsedPacket) {
         match  ipv6::parse_ipv6_header(content) {
             Ok((content, headers)) => {
-                self.parse_ip(content, parsed_packet);
+                self.parse_ip(&headers.next_header, content, parsed_packet);
                 parsed_packet.headers.push(PacketHeader::Ipv6(headers));
             },
             Err(_) => {
@@ -117,12 +117,18 @@ impl PacketParse {
         }
     }
 
-    fn parse_ip(&self, content: &[u8], parsed_packet: &mut ParsedPacket) {
-        if let Ok(_) = self.parse_tcp(content,parsed_packet) {}
-        else if let Ok(_) = self.parse_udp(content,parsed_packet) {}
-        else {
-            parsed_packet.remaining = content.to_owned();
-        }
+    fn parse_ip(&self, protocol: &ip::IPProtocol, content: &[u8], parsed_packet: &mut ParsedPacket) {
+        match protocol {
+            IPProtocol::UDP => {
+                self.parse_udp(content,parsed_packet);
+            },
+            IPProtocol::TCP  => {
+                self.parse_tcp(content,parsed_packet);
+            },
+            _ => {
+                parsed_packet.remaining = content.to_owned();
+            }
+        };
     }
 
     fn parse_tcp(&self, content: &[u8], parsed_packet: &mut ParsedPacket) -> Result<(),()> {
