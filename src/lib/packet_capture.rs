@@ -132,6 +132,8 @@ impl PacketCapture {
                     });
                 }
 
+                pool.join();
+
                 if let Some(path) = save_file_path {
                     let packets = packets.lock().unwrap();
                     let packets = &*packets;
