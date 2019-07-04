@@ -1,7 +1,5 @@
 use crate::lib::packet_capture::PacketCapture;
 use clap::{App, Arg, ArgMatches, SubCommand};
-use pcap::{Capture, Inactive, Precision, TimestampType};
-use std::cell::RefCell;
 
 pub struct ParseSubcommand {}
 

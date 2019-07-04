@@ -14,10 +14,7 @@ fn is_tstamp_type(val: String) -> Result<(), String> {
     if domain_set.contains(&&val[..]) {
         Ok(())
     } else {
-        Err(String::from(format!(
-            "The value must be one of {:?}",
-            domain_set
-        )))
+        Err(format!("The value must be one of {:?}", domain_set))
     }
 }
 
@@ -33,10 +30,7 @@ fn is_precision_type(val: String) -> Result<(), String> {
     if domain_set.contains(&&val[..]) {
         Ok(())
     } else {
-        Err(String::from(format!(
-            "The value must be one of {:?}",
-            domain_set
-        )))
+        Err(format!("The value must be one of {:?}", domain_set))
     }
 }
 
@@ -135,15 +129,15 @@ impl<'a, 'b> CaptureSubcommand {
         if let Some(val) = args.value_of("tstamp_type") {
             device = device.tstamp_type(self.get_tstamp_type(val).unwrap());
         }
-        return device;
+        device
     }
 
     pub fn start(&self, device: RefCell<Capture<Inactive>>, args: &ArgMatches) {
-        let mut device = device.into_inner();
+        let device = device.into_inner();
         let packet_capture = PacketCapture::new();
 
         match device.open() {
-            Ok(mut cap_handle) => {
+            Ok(cap_handle) => {
                 if let Some(val) = args.value_of("savefile") {
                     packet_capture.save_to_file(cap_handle, val);
                 } else {
