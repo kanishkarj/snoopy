@@ -248,45 +248,44 @@ impl PacketParse {
     }
 
     fn parse_tls(&self, content: &[u8], parsed_packet: &mut ParsedPacket) {
-
         if let Ok((_content, headers)) = tls_parser::parse_tls_plaintext(content) {
-                if let Some(msg) = headers.msg.get(0) {
-                    match msg {
-                        TlsMessage::Handshake(_) => {
-                            parsed_packet
-                                .headers
-                                .push(PacketHeader::Tls(TlsType::Handshake));
-                        }
-                        TlsMessage::ApplicationData(app_data) => {
-                            parsed_packet
-                                .headers
-                                .push(PacketHeader::Tls(TlsType::ApplicationData));
-                            parsed_packet.remaining = app_data.blob.to_owned();
-                        }
-                        TlsMessage::Heartbeat(_) => {
-                            parsed_packet
-                                .headers
-                                .push(PacketHeader::Tls(TlsType::Heartbeat));
-                        }
-                        TlsMessage::ChangeCipherSpec => {
-                            parsed_packet
-                                .headers
-                                .push(PacketHeader::Tls(TlsType::ChangeCipherSpec));
-                        }
-                        TlsMessage::Alert(_) => {
-                            parsed_packet
-                                .headers
-                                .push(PacketHeader::Tls(TlsType::Alert));
-                        }
+            if let Some(msg) = headers.msg.get(0) {
+                match msg {
+                    TlsMessage::Handshake(_) => {
+                        parsed_packet
+                            .headers
+                            .push(PacketHeader::Tls(TlsType::Handshake));
+                    }
+                    TlsMessage::ApplicationData(app_data) => {
+                        parsed_packet
+                            .headers
+                            .push(PacketHeader::Tls(TlsType::ApplicationData));
+                        parsed_packet.remaining = app_data.blob.to_owned();
+                    }
+                    TlsMessage::Heartbeat(_) => {
+                        parsed_packet
+                            .headers
+                            .push(PacketHeader::Tls(TlsType::Heartbeat));
+                    }
+                    TlsMessage::ChangeCipherSpec => {
+                        parsed_packet
+                            .headers
+                            .push(PacketHeader::Tls(TlsType::ChangeCipherSpec));
+                    }
+                    TlsMessage::Alert(_) => {
+                        parsed_packet
+                            .headers
+                            .push(PacketHeader::Tls(TlsType::Alert));
                     }
                 }
-            } else if let Ok((_content, headers)) = tls_parser::parse_tls_encrypted(content) {
-                parsed_packet
-                    .headers
-                    .push(PacketHeader::Tls(TlsType::EncryptedData));
-                parsed_packet.remaining = headers.msg.blob.to_owned();
-            } else {
-                parsed_packet.remaining = content.to_owned();
             }
+        } else if let Ok((_content, headers)) = tls_parser::parse_tls_encrypted(content) {
+            parsed_packet
+                .headers
+                .push(PacketHeader::Tls(TlsType::EncryptedData));
+            parsed_packet.remaining = headers.msg.blob.to_owned();
+        } else {
+            parsed_packet.remaining = content.to_owned();
+        }
     }
 }
