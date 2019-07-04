@@ -51,6 +51,7 @@ pub enum TlsType {
     Alert,
     ApplicationData,
     Heartbeat,
+    EncryptedData,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
@@ -247,8 +248,8 @@ impl PacketParse {
     }
 
     fn parse_tls(&self, content: &[u8], parsed_packet: &mut ParsedPacket) {
-        match tls_parser::parse_tls_plaintext(content) {
-            Ok((_content, headers)) => {
+
+        if let Ok((_content, headers)) = tls_parser::parse_tls_plaintext(content) {
                 if let Some(msg) = headers.msg.get(0) {
                     match msg {
                         TlsMessage::Handshake(_) => {
@@ -279,10 +280,13 @@ impl PacketParse {
                         }
                     }
                 }
-            }
-            Err(_) => {
+            } else if let Ok((_content, headers)) = tls_parser::parse_tls_encrypted(content) {
+                parsed_packet
+                    .headers
+                    .push(PacketHeader::Tls(TlsType::EncryptedData));
+                parsed_packet.remaining = headers.msg.blob.to_owned();
+            } else {
                 parsed_packet.remaining = content.to_owned();
             }
-        }
     }
 }
