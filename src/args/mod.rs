@@ -2,7 +2,7 @@ mod capture;
 mod parse;
 
 use clap::{crate_authors, crate_description, crate_name, crate_version, App, Arg, SubCommand};
-use pcap::{Capture, Precision, TimestampType};
+use pcap::{Capture, Precision, TimestampType, Device};
 
 use crate::lib::packet_capture::PacketCapture;
 use crate::args::capture::CaptureSubcommand;
@@ -35,23 +35,34 @@ pub fn parse_cli_args() {
                     }
                 }
             } else if let Some(run_args) = sub.subcommand_matches("run") {
+                let device;
                 match run_args.value_of("device_handle") {
                     Some(handle) => {
-                        let device = Capture::from_device(handle);
-                        match device {
-                            Ok(device) => {
-                                let device = RefCell::new(device);
-                                let device = RefCell::new(capture_subcommand.run_args(device, run_args));
-                                capture_subcommand.start(device, run_args);
-                            },
-                            Err(err) => {
-                                eprintln!("{:?}",err);
-                            },
-                        }
+                        device = Capture::from_device(handle);
                     },
                     None => {
+                        let capture_device = Device::lookup().unwrap();
 
+                        println!(
+                            "{:-^1$}", "-", 20,
+                        );
+                        println!("Sniffing  {}", capture_device.name);
+                        println!(
+                            "{:-^1$} \n\n", "-", 20,
+                        );
+
+                        device = Capture::from_device(capture_device);
                     }
+                }
+                match device {
+                    Ok(device) => {
+                        let device = RefCell::new(device);
+                        let device = RefCell::new(capture_subcommand.run_args(device, run_args));
+                        capture_subcommand.start(device, run_args);
+                    },
+                    Err(err) => {
+                        eprintln!("{:?}",err);
+                    },
                 }
             }
         },

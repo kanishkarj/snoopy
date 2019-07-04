@@ -50,7 +50,9 @@ impl<'a, 'b> CaptureSubcommand {
     pub fn get_subcommand(&self) -> App<'a, 'b> {
         let run_args = vec![
             Arg::with_name("device_handle")
-                .required(true),
+                .help("Specify the device interface")
+                .takes_value(true)
+                .long("handle"),
             Arg::with_name("timeout")
                 .help("Set the read timeout for the Capture. By default, this is 0, so it will block indefinitely.")
                 .takes_value(true)
