@@ -1,5 +1,5 @@
-mod lib;
 mod args;
+mod lib;
 
 use args::parse_cli_args;
 

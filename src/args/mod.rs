@@ -2,25 +2,20 @@ mod capture;
 mod parse;
 
 use clap::{crate_authors, crate_description, crate_name, crate_version, App, Arg, SubCommand};
-use pcap::{Capture, Precision, TimestampType, Device};
+use pcap::{Capture, Device, Precision, TimestampType};
 
-use crate::lib::packet_capture::PacketCapture;
 use crate::args::capture::CaptureSubcommand;
-use std::cell::RefCell;
 use crate::args::parse::ParseSubcommand;
+use crate::lib::packet_capture::PacketCapture;
+use std::cell::RefCell;
 
 fn print_default_device(name: String) {
-    println!(
-        "{:-^1$}", "-", 20,
-    );
+    println!("{:-^1$}", "-", 20,);
     println!("Sniffing  {}", name);
-    println!(
-        "{:-^1$} \n\n", "-", 20,
-    );
+    println!("{:-^1$} \n\n", "-", 20,);
 }
 
 pub fn parse_cli_args() {
-
     let capture_subcommand = CaptureSubcommand::new();
     let parse_subcommand = ParseSubcommand::new();
 
@@ -44,7 +39,7 @@ pub fn parse_cli_args() {
                 match run_args.value_of("device_handle") {
                     Some(handle) => {
                         device = Capture::from_device(handle);
-                    },
+                    }
                     None => {
                         let capture_device = Device::lookup().unwrap();
                         print_default_device(capture_device.name.clone());
@@ -57,20 +52,20 @@ pub fn parse_cli_args() {
                         let device = RefCell::new(device);
                         let device = RefCell::new(capture_subcommand.run_args(device, run_args));
                         capture_subcommand.start(device, run_args);
-                    },
+                    }
                     Err(err) => {
                         eprintln!("{}", err.to_string());
-                    },
+                    }
                 }
             }
-        },
+        }
         None => {}
     };
 
     match matches.subcommand_matches("parse") {
         Some(args) => {
             parse_subcommand.start(args);
-        },
+        }
         None => {}
     };
 }
