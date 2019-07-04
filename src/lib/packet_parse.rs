@@ -99,7 +99,7 @@ impl PacketParse {
         let mut parsed_packet = self.parse_link_layer(&data);
         parsed_packet.len = len;
         parsed_packet.timestamp = ts;
-        return parsed_packet;
+        parsed_packet
     }
 
     pub fn parse_link_layer(&self, content: &[u8]) -> ParsedPacket {
@@ -126,13 +126,13 @@ impl PacketParse {
                 pack.remaining = content.to_owned();
             }
         }
-        return pack;
+        pack
     }
 
     pub fn parse_ipv4(&self, content: &[u8], parsed_packet: &mut ParsedPacket) {
         match ipv4::parse_ipv4_header(content) {
             Ok((content, headers)) => {
-                self.parse_ip(&headers.protocol, content, parsed_packet);
+                self.parse_transport_layer(&headers.protocol, content, parsed_packet);
                 parsed_packet.headers.push(PacketHeader::Ipv4(headers));
             }
             Err(_) => {
@@ -144,7 +144,7 @@ impl PacketParse {
     pub fn parse_ipv6(&self, content: &[u8], parsed_packet: &mut ParsedPacket) {
         match ipv6::parse_ipv6_header(content) {
             Ok((content, headers)) => {
-                self.parse_ip(&headers.next_header, content, parsed_packet);
+                self.parse_transport_layer(&headers.next_header, content, parsed_packet);
                 parsed_packet.headers.push(PacketHeader::Ipv6(headers));
             }
             Err(_) => {
@@ -153,7 +153,7 @@ impl PacketParse {
         }
     }
 
-    fn parse_ip(
+    fn parse_transport_layer(
         &self,
         protocol: &ip::IPProtocol,
         content: &[u8],
@@ -202,7 +202,7 @@ impl PacketParse {
 
     fn parse_arp(&self, content: &[u8], parsed_packet: &mut ParsedPacket) {
         match arp::parse_arp_pkt(content) {
-            Ok((content, headers)) => {
+            Ok((_content, headers)) => {
                 parsed_packet.headers.push(PacketHeader::Arp(headers));
             }
             Err(_) => {
@@ -226,9 +226,8 @@ impl PacketParse {
 
     fn parse_tls(&self, content: &[u8], parsed_packet: &mut ParsedPacket) {
         match tls_parser::parse_tls_plaintext(content) {
-            Ok((content, headers)) => {
-                // Here we return after parsing one msg as we do not want multiple TLS headers, maybe there is a better approach.
-                for msg in headers.msg {
+            Ok((_content, headers)) => {
+                if let Some(msg) = headers.msg.get(0) {
                     match msg {
                         TlsMessage::Handshake(_) => {
                             parsed_packet

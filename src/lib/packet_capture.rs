@@ -1,11 +1,7 @@
 use crate::lib::packet_parse::{PacketHeader, PacketParse, ParsedPacket};
-use pcap::{Active, Capture, Device, Inactive};
-use std::fmt::{Display, Formatter};
+use pcap::{Active, Capture, Device};
 use std::fs;
-use std::iter::FromIterator;
 use std::net::IpAddr;
-use std::path::Path;
-use std::sync::mpsc::channel;
 use std::sync::{Arc, Mutex};
 use threadpool::ThreadPool;
 
@@ -37,8 +33,6 @@ impl PacketCapture {
     }
 
     pub fn print_to_console(&self, mut cap_handle: Capture<Active>) {
-        let pool = ThreadPool::new(num_cpus::get() * 2);
-
         self.print_headers();
 
         while let Ok(packet) = cap_handle.next() {
@@ -95,7 +89,7 @@ impl PacketCapture {
             };
         });
 
-        return (src_addr, src_port, dst_addr, dst_port);
+        (src_addr, src_port, dst_addr, dst_port)
     }
 
     fn format_output(&self, parsed_packet: &ParsedPacket) {
@@ -113,7 +107,7 @@ impl PacketCapture {
         let pool = ThreadPool::new(num_cpus::get() * 2);
         match Capture::from_file(file_name) {
             Ok(mut cap_handle) => {
-                let mut packets = Arc::new(Mutex::new(Vec::new()));
+                let packets = Arc::new(Mutex::new(Vec::new()));
 
                 while let Ok(packet) = cap_handle.next() {
                     let data = packet.data.to_owned();
