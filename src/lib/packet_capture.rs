@@ -9,8 +9,8 @@ use std::iter::FromIterator;
 use std::sync::{Arc, Mutex};
 use std::net::IpAddr;
 
-pub struct PacketCapture {
-}
+
+pub struct PacketCapture {}
 
 impl PacketCapture {
 
@@ -40,6 +40,9 @@ impl PacketCapture {
 
     pub fn print_to_console(&self, mut cap_handle: Capture<Active>) {
         let pool = ThreadPool::new( num_cpus::get() * 2 );
+
+        self.print_headers();
+
         while let Ok(packet) = cap_handle.next() {
 
             let data = packet.data.to_owned();
@@ -50,6 +53,16 @@ impl PacketCapture {
             let parsed_packet = packet_parse.parse_packet(data, len, ts);
             self.format_output(&parsed_packet);
         }
+    }
+
+    fn print_headers(&self) {
+        println!(
+            "{0: <25} | {1: <15} | {2: <25} | {3: <15} | {4: <15} | {5: <15} | {6: <35} |",
+            "Source IP", "Source Port", "Dest IP", "Dest Port", "Protocol", "Length", "Timestamp"
+        );
+        println!(
+            "{:-^1$}", "-", 165,
+        );
     }
 
     fn get_packet_meta(&self, parsed_packet : &ParsedPacket) -> (String, String, String, String){
@@ -77,8 +90,12 @@ impl PacketCapture {
                     src_addr = IpAddr::V6(packet.source_addr).to_string();
                     dst_addr = IpAddr::V6(packet.dest_addr).to_string();
                 },
+                PacketHeader::Arp(packet) => {
+                    src_addr = packet.src_addr.to_string();
+                    dst_addr = packet.dest_addr.to_string();
+                },
                 _ => {}
-            }
+            };
         });
 
         return (src_addr, src_port, dst_addr, dst_port);
@@ -89,8 +106,7 @@ impl PacketCapture {
         let protocol = &parsed_packet.headers[0].to_string();
         let length = &parsed_packet.len;
         let ts = &parsed_packet.timestamp;
-
-        println!("{}:{} {}:{} {} {} {}", src_addr, src_port, dst_addr, dst_port, protocol, length, ts);
+        println!("{0: <25} | {1: <15} | {2: <25} | {3: <15} | {4: <15} | {5: <15} | {6: <35}", src_addr, src_port, dst_addr, dst_port, protocol, length, ts);
     }
 
     pub fn parse_from_file(&self, file_name: &str, save_file_path: Option<&str>) {
@@ -122,6 +138,9 @@ impl PacketCapture {
                     fs::write(path, packets).unwrap();
                 } else {
                     let packets = packets.lock().unwrap();
+
+                    self.print_headers();
+
                     packets.iter().for_each(|pack| {
                         self.format_output(pack);
                     })
