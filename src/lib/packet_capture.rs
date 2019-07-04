@@ -18,11 +18,14 @@ impl PacketCapture {
         PacketCapture {}
     }
 
-    pub fn list_devices() -> Result<Vec<String>, pcap::Error> {
-        Ok(Device::list()?
+    pub fn list_devices() -> Result<(), pcap::Error> {
+        let devices: Vec<String> = Device::list()?
             .iter()
             .map(|val| val.name.clone())
-            .collect())
+            .collect();
+        println!("All Interfaces : ");
+        devices.iter().for_each(|val| println!("* {}", val));
+        Ok(())
     }
 
     pub fn save_to_file(&self, mut cap_handle: Capture<Active>, file_name: &str) {
