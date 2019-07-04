@@ -1,25 +1,23 @@
+use crate::lib::packet_capture::PacketCapture;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use pcap::{Capture, Inactive, Precision, TimestampType};
 use std::cell::RefCell;
-use crate::lib::packet_capture::PacketCapture;
 
 pub struct ParseSubcommand {}
 
 impl<'a, 'b> ParseSubcommand {
-
     pub fn new() -> ParseSubcommand {
         ParseSubcommand {}
     }
 
     pub fn get_subcommand(&self) -> App<'a, 'b> {
         let parse_args = vec![
-            Arg::with_name("file_name")
-                .required(true),
+            Arg::with_name("file_name").required(true),
             Arg::with_name("savefile")
                 .help("Parse the packets into JSON and save them to memory.")
                 .takes_value(true)
                 .short("s")
-                .long("savefile")
+                .long("savefile"),
         ];
 
         SubCommand::with_name("parse")
