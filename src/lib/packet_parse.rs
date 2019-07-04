@@ -95,26 +95,31 @@ impl PacketParse {
         PacketParse {}
     }
 
-    pub fn parse_packet(&self, data: Vec<u8>, len: u32, ts: String) -> ParsedPacket {
-        let mut parsed_packet = self.parse_link_layer(&data);
+    pub fn parse_packet(
+        &self,
+        data: Vec<u8>,
+        len: u32,
+        ts: String,
+    ) -> Result<ParsedPacket, String> {
+        let mut parsed_packet = self.parse_link_layer(&data)?;
         parsed_packet.len = len;
         parsed_packet.timestamp = ts;
-        parsed_packet
+        Ok(parsed_packet)
     }
 
-    pub fn parse_link_layer(&self, content: &[u8]) -> ParsedPacket {
+    pub fn parse_link_layer(&self, content: &[u8]) -> Result<ParsedPacket, String> {
         let mut pack = ParsedPacket::new();
         match ethernet::parse_ethernet_frame(content) {
             Ok((content, headers)) => {
                 match headers.ethertype {
                     EtherType::IPv4 => {
-                        self.parse_ipv4(content, &mut pack);
+                        self.parse_ipv4(content, &mut pack)?;
                     }
                     EtherType::IPv6 => {
-                        self.parse_ipv6(content, &mut pack);
+                        self.parse_ipv6(content, &mut pack)?;
                     }
                     EtherType::ARP => {
-                        self.parse_arp(content, &mut pack);
+                        self.parse_arp(content, &mut pack)?;
                     }
                     _ => {
                         pack.remaining = content.to_owned();
@@ -126,29 +131,41 @@ impl PacketParse {
                 pack.remaining = content.to_owned();
             }
         }
-        pack
+        Ok(pack)
     }
 
-    pub fn parse_ipv4(&self, content: &[u8], parsed_packet: &mut ParsedPacket) {
+    pub fn parse_ipv4(
+        &self,
+        content: &[u8],
+        parsed_packet: &mut ParsedPacket,
+    ) -> Result<(), String> {
         match ipv4::parse_ipv4_header(content) {
             Ok((content, headers)) => {
-                self.parse_transport_layer(&headers.protocol, content, parsed_packet);
+                self.parse_transport_layer(&headers.protocol, content, parsed_packet)?;
                 parsed_packet.headers.push(PacketHeader::Ipv4(headers));
+                Ok(())
             }
-            Err(_) => {
+            Err(err) => {
                 parsed_packet.remaining = content.to_owned();
+                Err(err.to_string())
             }
         }
     }
 
-    pub fn parse_ipv6(&self, content: &[u8], parsed_packet: &mut ParsedPacket) {
+    pub fn parse_ipv6(
+        &self,
+        content: &[u8],
+        parsed_packet: &mut ParsedPacket,
+    ) -> Result<(), String> {
         match ipv6::parse_ipv6_header(content) {
             Ok((content, headers)) => {
-                self.parse_transport_layer(&headers.next_header, content, parsed_packet);
+                self.parse_transport_layer(&headers.next_header, content, parsed_packet)?;
                 parsed_packet.headers.push(PacketHeader::Ipv6(headers));
+                Ok(())
             }
-            Err(_) => {
+            Err(err) => {
                 parsed_packet.remaining = content.to_owned();
+                Err(err.to_string())
             }
         }
     }
@@ -158,55 +175,60 @@ impl PacketParse {
         protocol: &ip::IPProtocol,
         content: &[u8],
         parsed_packet: &mut ParsedPacket,
-    ) {
+    ) -> Result<(), String> {
         match protocol {
             IPProtocol::UDP => {
-                self.parse_udp(content, parsed_packet);
+                self.parse_udp(content, parsed_packet)?;
+                Ok(())
             }
             IPProtocol::TCP => {
-                self.parse_tcp(content, parsed_packet);
+                self.parse_tcp(content, parsed_packet)?;
+                Ok(())
             }
             _ => {
                 parsed_packet.remaining = content.to_owned();
+                Err("Neither TCP nor UDP".to_string())
             }
-        };
+        }
     }
 
-    fn parse_tcp(&self, content: &[u8], parsed_packet: &mut ParsedPacket) -> Result<(), ()> {
+    fn parse_tcp(&self, content: &[u8], parsed_packet: &mut ParsedPacket) -> Result<(), String> {
         match tcp::parse_tcp_header(content) {
             Ok((content, headers)) => {
                 self.parse_tls(content, parsed_packet);
                 parsed_packet.headers.push(PacketHeader::Tcp(headers));
                 Ok(())
             }
-            Err(_) => {
+            Err(err) => {
                 parsed_packet.remaining = content.to_owned();
-                Err(())
+                Err(err.to_string())
             }
         }
     }
 
-    fn parse_udp(&self, content: &[u8], parsed_packet: &mut ParsedPacket) -> Result<(), ()> {
+    fn parse_udp(&self, content: &[u8], parsed_packet: &mut ParsedPacket) -> Result<(), String> {
         match udp::parse_udp_header(content) {
             Ok((content, headers)) => {
                 self.parse_dns(content, parsed_packet);
                 parsed_packet.headers.push(PacketHeader::Udp(headers));
                 Ok(())
             }
-            Err(_) => {
+            Err(err) => {
                 parsed_packet.remaining = content.to_owned();
-                Err(())
+                Err(err.to_string())
             }
         }
     }
 
-    fn parse_arp(&self, content: &[u8], parsed_packet: &mut ParsedPacket) {
+    fn parse_arp(&self, content: &[u8], parsed_packet: &mut ParsedPacket) -> Result<(), String> {
         match arp::parse_arp_pkt(content) {
             Ok((_content, headers)) => {
                 parsed_packet.headers.push(PacketHeader::Arp(headers));
+                Ok(())
             }
-            Err(_) => {
+            Err(err) => {
                 parsed_packet.remaining = content.to_owned();
+                Err(err.to_string())
             }
         }
     }
@@ -233,32 +255,27 @@ impl PacketParse {
                             parsed_packet
                                 .headers
                                 .push(PacketHeader::Tls(TlsType::Handshake));
-                            return;
                         }
                         TlsMessage::ApplicationData(app_data) => {
                             parsed_packet
                                 .headers
                                 .push(PacketHeader::Tls(TlsType::ApplicationData));
                             parsed_packet.remaining = app_data.blob.to_owned();
-                            return;
                         }
                         TlsMessage::Heartbeat(_) => {
                             parsed_packet
                                 .headers
                                 .push(PacketHeader::Tls(TlsType::Heartbeat));
-                            return;
                         }
                         TlsMessage::ChangeCipherSpec => {
                             parsed_packet
                                 .headers
                                 .push(PacketHeader::Tls(TlsType::ChangeCipherSpec));
-                            return;
                         }
                         TlsMessage::Alert(_) => {
                             parsed_packet
                                 .headers
                                 .push(PacketHeader::Tls(TlsType::Alert));
-                            return;
                         }
                     }
                 }

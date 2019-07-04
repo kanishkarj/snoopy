@@ -45,7 +45,7 @@ impl PacketCapture {
 
             let packet_parse = PacketParse::new();
             let parsed_packet = packet_parse.parse_packet(data, len, ts);
-            self.format_output(&parsed_packet);
+            self.print_packet(&parsed_packet);
         }
     }
 
@@ -92,15 +92,20 @@ impl PacketCapture {
         (src_addr, src_port, dst_addr, dst_port)
     }
 
-    fn format_output(&self, parsed_packet: &ParsedPacket) {
-        let (src_addr, src_port, dst_addr, dst_port) = self.get_packet_meta(&parsed_packet);
-        let protocol = &parsed_packet.headers[0].to_string();
-        let length = &parsed_packet.len;
-        let ts = &parsed_packet.timestamp;
-        println!(
-            "{0: <25} | {1: <15} | {2: <25} | {3: <15} | {4: <15} | {5: <15} | {6: <35}",
-            src_addr, src_port, dst_addr, dst_port, protocol, length, ts
-        );
+    fn print_packet(&self, parsed_packet: &Result<ParsedPacket, String>) {
+        match parsed_packet {
+            Ok(parsed_packet) => {
+                let (src_addr, src_port, dst_addr, dst_port) = self.get_packet_meta(&parsed_packet);
+                let protocol = &parsed_packet.headers[0].to_string();
+                let length = &parsed_packet.len;
+                let ts = &parsed_packet.timestamp;
+                println!(
+                    "{0: <25} | {1: <15} | {2: <25} | {3: <15} | {4: <15} | {5: <15} | {6: <35}",
+                    src_addr, src_port, dst_addr, dst_port, protocol, length, ts
+                );
+            }
+            Err(err) => println!("ERROR : {}", err),
+        }
     }
 
     pub fn parse_from_file(&self, file_name: &str, save_file_path: Option<&str>) {
@@ -138,7 +143,7 @@ impl PacketCapture {
                     self.print_headers();
 
                     packets.iter().for_each(|pack| {
-                        self.format_output(pack);
+                        self.print_packet(pack);
                     })
                 }
             }
