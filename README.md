@@ -55,11 +55,21 @@ the Json file is generated like given below :
 ]
 
 ```
+
+## Installation
+
+Ensure that you have `libpcap-dev` (ubuntu) or the corresponding package installed on your system.
+Run the following commands in the command line inside the folder : 
+
+```zsh
+cargo install --path .
+```
+
 ## Quick-Start
 
 To Capture packets and print them onto the console : 
 ```zsh
-➜  snoopy git:(master) ✗ sudo ./target/debug/snoopy capture run                                          
+➜ sudo snoopy capture run                                          
 --------------------
 Sniffing  wlp3s0
 -------------------- 
@@ -86,19 +96,19 @@ Source IP              | Source Port  | Dest IP                | Dest Port    | 
 Capture packets and save them to Pcap files :
 
 ```shell
-➜  snoopy git:(master) ✗ sudo ./target/debug/snoopy capture run --timeout 10000 --savefile captured.pcap
+➜ sudo snoopy capture run --timeout 10000 --savefile captured.pcap
 ```
 
 Parse Pcap files and print to console:
 
 ```shell
-➜  snoopy git:(master) ✗ sudo ./target/debug/snoopy parse ./Sample/captured.pcap
+➜ sudo snoopy parse ./Sample/captured.pcap
 ```
 
 Parse Pcap files and save to JSON file:
 
 ```shell
-➜  snoopy git:(master) ✗ sudo ./target/debug/snoopy parse ./Sample/captured.pcap --savefile ./parsed.json
+➜ sudo snoopy parse ./Sample/captured.pcap --savefile ./parsed.json
 ```
 
 ## Documentation
@@ -169,6 +179,23 @@ OPTIONS:
 
 ARGS:
     <file_name>  
+```
+
+## Docker
+
+Run the following commands in the command line inside the folder : 
+
+```zsh
+docker build -t snoopy .
+docker container run -it snoopy
+```
+
+## Build
+
+Run the following command in the command line inside the folder : 
+
+```zsh
+cargo build
 ```
 
 ## Todo
