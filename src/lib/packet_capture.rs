@@ -108,11 +108,22 @@ impl PacketCapture {
         }
     }
 
-    pub fn parse_from_file(&self, file_name: &str, save_file_path: Option<&str>) {
+    pub fn parse_from_file(
+        &self,
+        file_name: &str,
+        save_file_path: Option<&str>,
+        filter: Option<String>,
+    ) {
         let pool = ThreadPool::new(num_cpus::get() * 2);
         match Capture::from_file(file_name) {
             Ok(mut cap_handle) => {
                 let packets = Arc::new(Mutex::new(Vec::new()));
+
+                if let Some(filter) = filter {
+                    cap_handle
+                        .filter(&filter)
+                        .expect("Filters invalid, please check the documentation.");;
+                }
 
                 while let Ok(packet) = cap_handle.next() {
                     let data = packet.data.to_owned();
