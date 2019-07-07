@@ -99,16 +99,27 @@ Capture packets and save them to Pcap files :
 ➜ sudo snoopy capture run --timeout 10000 --savefile captured.pcap
 ```
 
+> Note: For capturing packets the user needs root user permissions to capture network packets.
+
 Parse Pcap files and print to console:
 
 ```shell
-➜ sudo snoopy parse ./Sample/captured.pcap
+➜ snoopy parse ./Sample/captured.pcap
 ```
+
+Parse Pcap files and print to console (with filters):
+
+```shell
+➜ snoopy parse ./Sample/captured.pcap --filter "tcp port 443"
+```
+
+> The above command will print all TCP packets with source/destination port 443.
+
 
 Parse Pcap files and save to JSON file:
 
 ```shell
-➜ sudo snoopy parse ./Sample/captured.pcap --savefile ./parsed.json
+➜ snoopy parse ./Sample/captured.pcap --savefile ./parsed.json
 ```
 
 ## Documentation
@@ -156,6 +167,7 @@ OPTIONS:
     -b, --buffer_size <buffer_size>    Set the buffer size for incoming packet data. The default is 1000000. This should
                                        always be larger than the snaplen.
         --handle <device_handle>       Specify the device interface
+    -f, --filter <filter>              Set filter to the capture using the given BPF program string.
         --precision <precision>        Set the time stamp precision returned in captures (Micro/Nano).
         --savefile <savefile>          Save the captured packets to file.
     -s, --snaplen <snaplen>            Set the snaplen size (the maximum length of a packet captured into the buffer).
@@ -165,6 +177,7 @@ OPTIONS:
                                        indefinitely.
         --tstamp_type <tstamp_type>    Set the time stamp type to be used by a capture device (Host / HostLowPrec /
                                        HostHighPrec / Adapter / AdapterUnsynced).
+
 ```
 ```zsh
 USAGE:
@@ -175,11 +188,14 @@ FLAGS:
     -V, --version    Prints version information
 
 OPTIONS:
+    -f, --filter <filter>        Set filter to the capture using the given BPF program string.
     -s, --savefile <savefile>    Parse the packets into JSON and save them to memory.
 
 ARGS:
-    <file_name>  
+    <file_name>   
 ```
+
+> Note: The filters can be defined according to the syntax specified [here](http://biot.com/capstats/bpf.html).
 
 ## Docker
 
