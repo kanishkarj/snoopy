@@ -85,6 +85,11 @@ impl<'a, 'b> CaptureSubcommand {
                 .takes_value(true)
                 .long("tstamp_type")
                 .validator(is_tstamp_type),
+            Arg::with_name("filter")
+                .help("Set filter to the capture using the given BPF program string.")
+                .takes_value(true)
+                .long("filter")
+                .short("f"),
             Arg::with_name("savefile")
                 .help("Save the captured packets to file.")
                 .takes_value(true)
@@ -105,7 +110,7 @@ impl<'a, 'b> CaptureSubcommand {
         &self,
         device: RefCell<Capture<Inactive>>,
         args: &ArgMatches,
-    ) -> Capture<Inactive> {
+    ) -> RefCell<Capture<Inactive>> {
         let mut device = device.into_inner();
         // the validators will ensure we are passing the proper type, hence using unwrap is not a problem.
         if let Some(val) = args.value_of("timeout") {
@@ -129,7 +134,10 @@ impl<'a, 'b> CaptureSubcommand {
         if let Some(val) = args.value_of("tstamp_type") {
             device = device.tstamp_type(self.get_tstamp_type(val).unwrap());
         }
-        device
+        if let Some(val) = args.value_of("tstamp_type") {
+            device = device.tstamp_type(self.get_tstamp_type(val).unwrap());
+        }
+        RefCell::new(device)
     }
 
     pub fn start(&self, device: RefCell<Capture<Inactive>>, args: &ArgMatches) {
@@ -137,7 +145,15 @@ impl<'a, 'b> CaptureSubcommand {
         let packet_capture = PacketCapture::new();
 
         match device.open() {
-            Ok(cap_handle) => {
+            Ok(mut cap_handle) => {
+                // Set pacp capture filters
+                if let Some(val) = args.value_of("filter") {
+                    cap_handle
+                        .filter(val)
+                        .expect("Filters invalid, please check the documentation.");
+                }
+
+                // To select between saving to file and printing to console.
                 if let Some(val) = args.value_of("savefile") {
                     packet_capture.save_to_file(cap_handle, val);
                 } else {

@@ -49,7 +49,7 @@ pub fn parse_cli_args() {
             match device {
                 Ok(device) => {
                     let device = RefCell::new(device);
-                    let device = RefCell::new(capture_subcommand.run_args(device, run_args));
+                    let device = capture_subcommand.run_args(device, run_args);
                     capture_subcommand.start(device, run_args);
                 }
                 Err(err) => {
