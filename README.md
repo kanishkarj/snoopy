@@ -1,5 +1,5 @@
 # Snoopy
-
+[![Crates.io](https://img.shields.io/crates/v/snoopy.svg)](https://crates.io/crates/snoopy) 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Build Status](https://travis-ci.com/kanishkarj/snoopy.svg?token=jy9kvPoUgCS7spyshyKq&branch=master)](https://travis-ci.com/kanishkarj/snoopy)
 

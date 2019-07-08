@@ -1,6 +1,6 @@
 [package]
 name = "snoopy"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["kanishkarj <kanishkarj@hotmail.com>"]
 edition = "2018"
 exclude = [
