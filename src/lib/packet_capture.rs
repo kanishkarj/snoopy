@@ -5,11 +5,13 @@ use std::net::IpAddr;
 use std::sync::{Arc, Mutex};
 use threadpool::ThreadPool;
 
-pub struct PacketCapture {}
+pub struct PacketCapture {
+    err_count: u64,
+}
 
 impl PacketCapture {
     pub fn new() -> PacketCapture {
-        PacketCapture {}
+        PacketCapture { err_count: 0 }
     }
 
     pub fn list_devices() -> Result<(), pcap::Error> {
@@ -19,7 +21,12 @@ impl PacketCapture {
         Ok(())
     }
 
-    pub fn save_to_file(&self, mut cap_handle: Capture<Active>, file_name: &str) {
+    fn print_err(&mut self, err: String) {
+        self.err_count += 1;
+        eprintln!("ERROR {} : {}", self.err_count, err);
+    }
+
+    pub fn save_to_file(&mut self, mut cap_handle: Capture<Active>, file_name: &str) {
         match cap_handle.savefile(&file_name) {
             Ok(mut file) => {
                 while let Ok(packet) = cap_handle.next() {
@@ -27,12 +34,12 @@ impl PacketCapture {
                 }
             }
             Err(err) => {
-                eprintln!("{:?}", err);
+                self.print_err(err.to_string());
             }
         }
     }
 
-    pub fn print_to_console(&self, mut cap_handle: Capture<Active>) {
+    pub fn print_to_console(&mut self, mut cap_handle: Capture<Active>) {
         self.print_headers();
 
         while let Ok(packet) = cap_handle.next() {
@@ -45,7 +52,14 @@ impl PacketCapture {
 
             let packet_parse = PacketParse::new();
             let parsed_packet = packet_parse.parse_packet(data, len, ts);
-            self.print_packet(&parsed_packet);
+            match parsed_packet {
+                Ok(parsed_packet) => {
+                    self.print_packet(&parsed_packet);
+                }
+                Err(err) => {
+                    self.print_err(err.to_string());
+                }
+            }
         }
     }
 
@@ -92,24 +106,19 @@ impl PacketCapture {
         (src_addr, src_port, dst_addr, dst_port)
     }
 
-    fn print_packet(&self, parsed_packet: &Result<ParsedPacket, String>) {
-        match parsed_packet {
-            Ok(parsed_packet) => {
-                let (src_addr, src_port, dst_addr, dst_port) = self.get_packet_meta(&parsed_packet);
-                let protocol = &parsed_packet.headers[0].to_string();
-                let length = &parsed_packet.len;
-                let ts = &parsed_packet.timestamp;
-                println!(
-                    "{0: <25} | {1: <15} | {2: <25} | {3: <15} | {4: <15} | {5: <15} | {6: <35}",
-                    src_addr, src_port, dst_addr, dst_port, protocol, length, ts
-                );
-            }
-            Err(err) => println!("ERROR : {}", err),
-        }
+    fn print_packet(&self, parsed_packet: &ParsedPacket) {
+        let (src_addr, src_port, dst_addr, dst_port) = self.get_packet_meta(&parsed_packet);
+        let protocol = &parsed_packet.headers[0].to_string();
+        let length = &parsed_packet.len;
+        let ts = &parsed_packet.timestamp;
+        println!(
+            "{0: <25} | {1: <15} | {2: <25} | {3: <15} | {4: <15} | {5: <15} | {6: <35}",
+            src_addr, src_port, dst_addr, dst_port, protocol, length, ts
+        );
     }
 
     pub fn parse_from_file(
-        &self,
+        &mut self,
         file_name: &str,
         save_file_path: Option<&str>,
         filter: Option<String>,
@@ -146,8 +155,19 @@ impl PacketCapture {
                 pool.join();
 
                 if let Some(path) = save_file_path {
+                    let mut parsed_packets = vec![];
+
                     let packets = packets.lock().unwrap();
                     let packets = &*packets;
+                    packets.iter().for_each(|pkt| match pkt {
+                        Ok(pkt) => {
+                            parsed_packets.push(pkt);
+                        }
+                        Err(err) => {
+                            self.print_err(err.to_string());
+                        }
+                    });
+
                     let packets = serde_json::to_string(&packets).unwrap();
                     fs::write(path, packets).unwrap();
                 } else {
@@ -155,13 +175,18 @@ impl PacketCapture {
 
                     self.print_headers();
 
-                    packets.iter().for_each(|pack| {
-                        self.print_packet(pack);
+                    packets.iter().for_each(|pack| match pack {
+                        Ok(pack) => {
+                            self.print_packet(pack);
+                        }
+                        Err(err) => {
+                            self.print_err(err.to_string());
+                        }
                     })
                 }
             }
             Err(err) => {
-                eprintln!("{:?}", err);
+                self.print_err(err.to_string());
             }
         }
     }

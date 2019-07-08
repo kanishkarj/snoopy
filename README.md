@@ -63,7 +63,7 @@ Ensure that you have `libpcap-dev` (ubuntu) or the corresponding package install
 Run the following commands in the command line inside the folder : 
 
 ```zsh
-cargo install --path .
+cargo install snoopy
 ```
 
 ## Quick-Start

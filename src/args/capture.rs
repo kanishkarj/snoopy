@@ -142,7 +142,7 @@ impl<'a, 'b> CaptureSubcommand {
 
     pub fn start(&self, device: RefCell<Capture<Inactive>>, args: &ArgMatches) {
         let device = device.into_inner();
-        let packet_capture = PacketCapture::new();
+        let mut packet_capture = PacketCapture::new();
 
         match device.open() {
             Ok(mut cap_handle) => {
