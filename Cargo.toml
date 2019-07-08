@@ -1,19 +1,21 @@
 [package]
 name = "snoopy"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["kanishkarj <kanishkarj@hotmail.com>"]
 edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+include = [
+    "**/*.rs",
+    "Cargo.toml",
+]
 
 [dependencies]
 clap = "2.33.0"
 pcap = "0.7.0"
-pktparse = {version = "*", features = ["derive"]}
+pktparse = {version = "0.4.0", features = ["derive"]}
 dns-parser = "0.8"
 tls-parser = "0.7"
 hwaddr = "0.1.2"
-nom = "*"
+nom = "5.0.0"
 serde_json = "1.0"
 serde = "1.0"
 httparse = "*"
