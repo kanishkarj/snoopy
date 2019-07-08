@@ -30,7 +30,7 @@ impl<'a, 'b> ParseSubcommand {
 
     pub fn start(&self, args: &ArgMatches) {
         let mut save_file_path = None;
-        let packet_capture = PacketCapture::new();
+        let mut packet_capture = PacketCapture::new();
         let mut filter = None;
 
         if let Some(val) = args.value_of("filter") {

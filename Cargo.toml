@@ -1,6 +1,6 @@
 [package]
 name = "snoopy"
-version = "0.3.1"
+version = "0.3.2"
 authors = ["kanishkarj <kanishkarj@hotmail.com>"]
 edition = "2018"
 exclude = [
@@ -13,10 +13,9 @@ repository = "https://github.com/kanishkarj/snoopy"
 readme = "README.md"
 keywords = ["pcap-parser", "packet-capture", "packet-sniffer", "packet-parsing", "command-line-tool"]
 categories = ["command-line-utilities", "parsing"]
-license = "MIT"
 license-file = "LICENSE"
 travis-ci = { repository = "kanishkarj/snoopy", branch = "master" }
-maintenance = { status = "passively-maintained" }
+maintenance = { status = "actively-developed" }
 
 [dependencies]
 clap = "2.33.0"
