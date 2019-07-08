@@ -3,10 +3,20 @@ name = "snoopy"
 version = "0.3.0"
 authors = ["kanishkarj <kanishkarj@hotmail.com>"]
 edition = "2018"
-include = [
-    "**/*.rs",
-    "Cargo.toml",
+exclude = [
+    "Sample/**/*",
 ]
+description = "A highly configurable multi-threaded packet sniffer and parser."
+documentation = "https://github.com/kanishkarj/snoopy"
+homepage = "https://github.com/kanishkarj/snoopy"
+repository = "https://github.com/kanishkarj/snoopy"
+readme = "README.md"
+keywords = ["pcap-parser", "packet-capture", "packet-sniffer", "packet-parsing", "command-line-tool"]
+categories = ["command-line-utilities", "parsing"]
+license = "MIT"
+license-file = "LICENSE"
+travis-ci = { repository = "kanishkarj/snoopy", branch = "master" }
+maintenance = { status = "passively-maintained" }
 
 [dependencies]
 clap = "2.33.0"
@@ -18,6 +28,6 @@ hwaddr = "0.1.2"
 nom = "5.0.0"
 serde_json = "1.0"
 serde = "1.0"
-httparse = "*"
+httparse = "1.3.0"
 threadpool = "1.0"
 num_cpus = "1.0"

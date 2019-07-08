@@ -11,6 +11,7 @@ A highly configurable multi-threaded packet sniffer and parser build in rust-lan
 * While capturing packets, various configuration parameters can be specified. 
 * Parse Pcap files and print them to console, or extract more verbose information from each packet and store them to JSON file.
 * Multi-threaded parsing of packets.
+* Filter packets while parsing and capturing.
 * Currently supports the following protocols :
   * Ethernet
   * Ipv4
