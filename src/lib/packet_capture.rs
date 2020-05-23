@@ -131,7 +131,7 @@ impl PacketCapture {
                 if let Some(filter) = filter {
                     cap_handle
                         .filter(&filter)
-                        .expect("Filters invalid, please check the documentation.");;
+                        .expect("Filters invalid, please check the documentation.");
                 }
 
                 while let Ok(packet) = cap_handle.next() {
